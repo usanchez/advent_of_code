@@ -36,15 +36,71 @@ Here are a few more examples:
     ((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2 becomes 13632.
 
 Before you can help with the homework, you need to understand it yourself. Evaluate the expression on each line of the homework; what is the sum of the resulting values?
+--- Part Two ---
+
+You manage to answer the child's questions and they finish part 1 of their homework, but get stuck when they reach the next section: advanced math.
+
+Now, addition and multiplication have different precedence levels, but they're not the ones you're familiar with. Instead, addition is evaluated before multiplication.
+
+For example, the steps to evaluate the expression 1 + 2 * 3 + 4 * 5 + 6 are now as follows:
+
+1 + 2 * 3 + 4 * 5 + 6
+  3   * 3 + 4 * 5 + 6
+  3   *   7   * 5 + 6
+  3   *   7   *  11
+     21       *  11
+         231
+
+Here are the other examples from above:
+
+    1 + (2 * 3) + (4 * (5 + 6)) still becomes 51.
+    2 * 3 + (4 * 5) becomes 46.
+    5 + (8 * 3 + 9 + 3 * 4 * 3) becomes 1445.
+    5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4)) becomes 669060.
+    ((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2 becomes 23340.
+
+What do you get if you add up the results of evaluating the homework problems using these new rules?
 
 """
 
+expressions = []
+
+with open('input.txt') as f:
+    for line in f:
+        expressions.append(line.strip())
+del line, f
+
+
+def evaluate_expression(expression, part="one"):
+    innermost_open_parenth = -1
+    innermost_close_parenth = -1
+    while True:
+        for idx, c in enumerate(expression):
+            if c == "(":
+                innermost_open_parenth = idx
+            elif c == ")":
+                innermost_close_parenth = idx
+                break
+        if innermost_open_parenth > -1 and innermost_close_parenth > -1:
+            inner_expression = expression[innermost_open_parenth:innermost_close_parenth + 1]
+            if part == "one":
+                result = evaluate_operation_part_one(expression[innermost_open_parenth + 1:innermost_close_parenth])
+            else:
+                result = evaluate_operation_part_two(expression[innermost_open_parenth + 1:innermost_close_parenth])
+            expression = expression.replace(inner_expression, str(result))
+            innermost_open_parenth = -1
+            innermost_close_parenth = -1
+        else:
+            if part == "one":
+                return evaluate_operation_part_one(expression)
+            else:
+                return evaluate_operation_part_two(expression)
+
+
 # Part one
 
-total_sum = 0
 
-
-def evaluate_operation(expression):
+def evaluate_operation_part_one(expression):
     result = 0
     nums = [None, None]
     operation = None
@@ -66,32 +122,54 @@ def evaluate_operation(expression):
     return nums[0]
 
 
+total_sum = 0
 
-def evaluate_expression(expression):
-    innermost_open_parenth = -1
-    innermost_close_parenth = -1
-    while True:
-        for idx, c in enumerate(expression):
-            if c == "(":
-                innermost_open_parenth = idx
-            elif c == ")":
-                innermost_close_parenth = idx
-                break
-        if innermost_open_parenth > -1 and innermost_close_parenth > -1:
-            inner_expression = expression[innermost_open_parenth:innermost_close_parenth+1]
-            result = evaluate_operation(expression[innermost_open_parenth + 1:innermost_close_parenth])
-            expression = expression.replace(inner_expression, str(result))
-            innermost_open_parenth = -1
-            innermost_close_parenth = -1
+for line in expressions:
+    total_sum += evaluate_expression(line.strip())
+
+print(total_sum)
+
+
+# Part two
+
+def evaluate_operation_part_two(expression):
+    result = 0
+    nums = [None, None]
+    operation = None
+    operation_elements = expression.split(" ")
+
+    # Perform sums first
+    idx_sums = [idx for idx, elem in enumerate(operation_elements) if elem == "+"]
+
+    while idx_sums:
+        i = idx_sums[0]
+        second_num = operation_elements.pop(i + 1)
+        first_num = operation_elements.pop(i - 1)
+        operation_elements[i - 1] = int(first_num) + int(second_num)
+        idx_sums = [idx for idx, elem in enumerate(operation_elements) if elem == "+"]
+
+    # Perform the rest of operations
+    for c in operation_elements:
+        if c not in ["*", "+"]:
+            num = int(c)
+            if nums[0] is None:
+                nums[0] = num
+            elif operation is not None:
+                nums[1] = num
+                if operation == "*":
+                    result = nums[0] * nums[1]
+                elif operation == "+":
+                    result = nums[0] + nums[1]
+                operation = None
+                nums = [result, None]
         else:
-            return evaluate_operation(expression)
+            operation = c
+    return nums[0]
 
 
-print(evaluate_operation("1 + 6 + 44"))
+total_sum = 0
 
-with open('input.txt') as f:
-    for line in f:
-        total_sum += evaluate_expression(line.strip())
-del line, f
+for line in expressions:
+    total_sum += evaluate_expression(line.strip(), "two")
 
 print(total_sum)
